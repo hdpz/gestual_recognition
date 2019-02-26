@@ -9,8 +9,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using System;
 
-public class MotionViewRibbon : MonoBehaviour
+public class setplane : MonoBehaviour
 {
 
     //Record
@@ -326,7 +327,8 @@ public class MotionViewRibbon : MonoBehaviour
             //Detect plane
             if (Speed.Count > 11)
             {
-                Draw_Plane = Detect_Plane(Speed, Speed.Count - 11, Speed.Count - 1);
+                Vector3 norm_vector;
+                (Draw_Plane, norm_vector )= Detect_Plane(Speed, Speed.Count - 11, Speed.Count - 1);
             }
         }
 
@@ -455,52 +457,42 @@ public class MotionViewRibbon : MonoBehaviour
 
     void Set_Plane(List<Vector3> Speeds, GameObject plane)
     {
-        plane.transform.position.Set();
-        plane.transform.rotation.SetLookRotation();
+        //plane.transform.position.Set();
+        //plane.transform.rotation.SetLookRotation();
     }
 
     (bool, Vector3) Detect_Plane(List<Vector3> vectors, int StartIndex, int EndIndex)
     {
-        startVector = vectors[StartIndex];
-        List<Vector3> perps;
+        Vector3 startVector = vectors[StartIndex];
+        List<Vector3> perps = new List<Vector3>();
         for (int i = StartIndex; i < EndIndex; i++)
         {
-            perp = Compute_Vect_Prod(startVector, vectors[i]);
-            perps = Normalise_Vect(perp);
+            Vector3 perp = Compute_Vect_Prod(startVector, vectors[i]);
+            perp.Normalize();
             perps.Add(perp);
         }
-        draw_plane = Detect_Colinearity(perps);
+        bool draw_plane = Detect_Colinearity(perps);
         return (draw_plane, startVector);
 
     }
 
     Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
     {
-        Vector3 res;
-        res[0] = a[1] * b[2] - a[2] * b[1];
-        res[1] = a[2] * b[0] - b[2] * a[0];
-        res[2] = a[0] * b[1] - b[0] * a[1];
+        Vector3 res= new Vector3();
+        res.Set((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (b[2] * a[0]), (a[0] * b[1]) - (b[0] * a[1]));
         return res;
     }
 
-    Vector3 Normalise_Vect(Vector3 a)
-    {
-        float norm = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-        a[0] = a[0] / norm;
-        a[1] = a[1] / norm;
-        a[2] = a[2] / norm;
-        return a;
-    }
 
     bool Detect_Colinearity(List<Vector3> vectors)
     {
-        float prodSum;
-        for (i = 0; i < vectors.Count - 1; i++)
+        float prodSum=0;
+        for (int i = 0; i < vectors.Count - 1; i++)
         {
-            float prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
-            prodSum += prod;
+            Vector3 prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
+            prodSum += prod.magnitude;
         }
-        avg = prodSum / vectors.Count;
+        float avg = prodSum / vectors.Count;
         if (avg < 0.1)
         {
             return true;
