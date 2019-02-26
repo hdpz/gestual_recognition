@@ -10,356 +10,395 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
-public class MotionViewRibbon : MonoBehaviour {
+public class MotionViewRibbon : MonoBehaviour
+{
 
-	//Record
-	public bool Record = true;
-	public int FrameCount;
-	public float BeginTime;
-	public float DTime;
-	public float MDTime;
-	public GameObject MotionObj; 
-	public GameObject MotionRef; 
+    //Record
+    public bool Record = true;
+    public int FrameCount;
+    public float BeginTime;
+    public float DTime;
+    public float MDTime;
+    public GameObject MotionObj;
+    public GameObject MotionRef;
 
-	//Data Viz Property
-	public bool	PosActive = true;
-	public Color Pos_Col = Color.black;
-	public Vector3 CurrentPos;
+    //Data Viz Property
+    public bool PosActive = true;
+    public Color Pos_Col = Color.black;
+    public Vector3 CurrentPos;
 
-	public bool SpeedActive = false;
-	[Range (0,10)]
-	public float GizmoSpeedScale = 1;
-	public Color Speed_Col = Color.green;
-	public Vector3 CurrentSpeed;
-	public float CurrentSpeedMag;
+    public bool SpeedActive = false;
+    [Range(0, 10)]
+    public float GizmoSpeedScale = 1;
+    public Color Speed_Col = Color.green;
+    public Vector3 CurrentSpeed;
+    public float CurrentSpeedMag;
 
-	public bool AccActive = false;
-	[Range (0,10)]
-	public float GizmoAccScale = 1;
-	public Color Acc_Col = Color.red;
-	public Vector3 CurrentAcc;
-	public float CurrentAccMag;
+    public bool AccActive = false;
+    [Range(0, 10)]
+    public float GizmoAccScale = 1;
+    public Color Acc_Col = Color.red;
+    public Vector3 CurrentAcc;
+    public float CurrentAccMag;
 
-	public bool JerkActive = false;
-	[Range (0,10)]
-	public float GizmoJerkScale = 1;
-	public Color Jerk_Col = Color.blue;
-	public Vector3 CurrentJerk; 
-	public float CurrentJerkMag;
+    public bool JerkActive = false;
+    [Range(0, 10)]
+    public float GizmoJerkScale = 1;
+    public Color Jerk_Col = Color.blue;
+    public Vector3 CurrentJerk;
+    public float CurrentJerkMag;
 
-	public bool OrientationActive = false;
-	[Range (0,10)]
-	public float GizmoQuatScale = 1;
-	public Color Quat_Col = Color.yellow;
-	public Quaternion CurrentQuat;
-	public Vector3 CurrentQuatAxis;
-	public float CurrentQuatAngle;
+    public bool OrientationActive = false;
+    [Range(0, 10)]
+    public float GizmoQuatScale = 1;
+    public Color Quat_Col = Color.yellow;
+    public Quaternion CurrentQuat;
+    public Vector3 CurrentQuatAxis;
+    public float CurrentQuatAngle;
 
-	//Trail property
-	public bool	Trail = true;
-	[Range (0,1)]
-	public float TrailLinesWidth = 0.1f;
-	public int TrailLength = 360 ;
+    //Trail property
+    public bool Trail = true;
+    [Range(0, 1)]
+    public float TrailLinesWidth = 0.1f;
+    public int TrailLength = 360;
     public AnimationCurve Alpha;
 
     //Vector property
     public bool Vector = true;
-	[Range (0,1)]
-	public float VectLinesWidth = 0.1f;
+    [Range(0, 1)]
+    public float VectLinesWidth = 0.1f;
 
-	public Material LinesMaterials;
+    public Material LinesMaterials;
     public Material RibbonMaterials;
 
     //Filter
-    [Range (1,120)]
-	public int MovingAverageSample = 15;
+    [Range(1, 120)]
+    public int MovingAverageSample = 15;
 
-	//RefValue
-	Matrix4x4 RefMat;
-	Matrix4x4 RefMatInv;
-	Quaternion RefQuat;
-	Vector3 RefPos;
+    public bool Draw_Plane = false;
 
-	//Data
-	List<float> Times 		= new List<float> ();
-	List<float> DTimes 		= new List<float> ();
-	List<Vector3> Pos 		= new List<Vector3> ();
-	List<Vector3> Speed 	= new List<Vector3> ();
-	List<Vector3> Acc 		= new List<Vector3> ();
-	List<Vector3> Jerk 		= new List<Vector3> ();
-	List<Quaternion> Quat 	= new List<Quaternion> ();
+    //RefValue
+    Matrix4x4 RefMat;
+    Matrix4x4 RefMatInv;
+    Quaternion RefQuat;
+    Vector3 RefPos;
 
-	//Data Tag DEBUG put in Define 
-	string Speed_Tag 	= "Speed";
-	string Acc_Tag 		= "Acc";
-	string Jerk_Tag 	= "Jerk";
-	string Pos_Tag 		= "Pos";
-	string Quat_Tag 	= "Orientation";
+    //Data
+    List<float> Times = new List<float>();
+    List<float> DTimes = new List<float>();
+    List<Vector3> Pos = new List<Vector3>();
+    List<Vector3> Speed = new List<Vector3>();
+    List<Vector3> Acc = new List<Vector3>();
+    List<Vector3> Jerk = new List<Vector3>();
+    List<Quaternion> Quat = new List<Quaternion>();
 
-	//Data Trail 
-	GameObject Pos_Trail; 
-	GameObject Speed_Ribbon;
-	GameObject Acc_Ribbon; 
-	GameObject Jerk_Ribbon;
+    //Data Tag DEBUG put in Define 
+    string Speed_Tag = "Speed";
+    string Acc_Tag = "Acc";
+    string Jerk_Tag = "Jerk";
+    string Pos_Tag = "Pos";
+    string Quat_Tag = "Orientation";
+
+    //Data Trail 
+    GameObject Pos_Trail;
+    GameObject Speed_Ribbon;
+    GameObject Acc_Ribbon;
+    GameObject Jerk_Ribbon;
     GameObject Quat_Trail;
 
     //Data Vectors
     GameObject Speed_Vect;
-	GameObject Acc_Vect;
-	GameObject Jerk_Vect;
-	GameObject Quat_Vect;
+    GameObject Acc_Vect;
+    GameObject Jerk_Vect;
+    GameObject Quat_Vect;
 
-	//Trail Object
-	List<GameObject> TrailObjects 	= new List<GameObject> ();
-	List<GameObject> VectObjects 	= new List<GameObject> ();
-
-
-
-	// Use this for initialization
-	void Start () {
-		RecordInit ();
+    //Trail Object
+    List<GameObject> TrailObjects = new List<GameObject>();
+    List<GameObject> VectObjects = new List<GameObject>();
 
 
 
-	}
+    // Use this for initialization
+    void Start()
+    {
+        RecordInit();
+    }
 
 
-	void Update () {
-	
-		if (Record)
-			RecordData ();
-		
-		// Draw Vector
-		if (Vector) {
-			if (SpeedActive) {
-				Speed_Vect.SetActive (true);
-				DrawVector (Speed_Vect, Speed [Speed.Count - 1], GizmoSpeedScale);
-			} 
-			else {
-				Speed_Vect.SetActive (false);
-			}
-	
-			if (AccActive) {
-				Acc_Vect.SetActive (true);
-				DrawVector (Acc_Vect, Acc [Acc.Count - 1], GizmoAccScale);
-			} 
-			else {
-				Acc_Vect.SetActive (false);
-			}
+    void Update()
+    {
 
-			if (JerkActive) {
-				Jerk_Vect.SetActive (true);
-				DrawVector (Jerk_Vect, Jerk [Jerk.Count - 1], GizmoJerkScale);
-			} 
-			else {
-				Jerk_Vect.SetActive (false);
-			}
-			if (OrientationActive) {
-				Vector3 QuatAxis;
-				float QuatAngle;
+        if (Record)
+            RecordData();
 
-				Quaternion DQuat;
-				if (Quat.Count < 2)
-					DQuat = Quaternion.identity;
-				else
-					DQuat = Quaternion.Inverse (Quat [Quat.Count - 2]) * Quat [Quat.Count - 1];
-				
-				DQuat.ToAngleAxis (out QuatAngle, out  QuatAxis);
-				Quat_Vect.SetActive (true);
-				DrawVector (Quat_Vect, QuatAxis*QuatAngle, GizmoQuatScale);
-			} 
-			else {
-				Quat_Vect.SetActive (false);
-			}
-		}
-		else {
-			Speed_Vect.SetActive (false);
-			Acc_Vect.SetActive (false);
-			Jerk_Vect.SetActive (false);
-			Quat_Vect.SetActive (false);
-		}
+        // Draw Vector
+        if (Vector)
+        {
+            if (SpeedActive)
+            {
+                Speed_Vect.SetActive(true);
+                DrawVector(Speed_Vect, Speed[Speed.Count - 1], GizmoSpeedScale);
+            }
+            else
+            {
+                Speed_Vect.SetActive(false);
+            }
+
+            if (AccActive)
+            {
+                Acc_Vect.SetActive(true);
+                DrawVector(Acc_Vect, Acc[Acc.Count - 1], GizmoAccScale);
+            }
+            else
+            {
+                Acc_Vect.SetActive(false);
+            }
+
+            if (JerkActive)
+            {
+                Jerk_Vect.SetActive(true);
+                DrawVector(Jerk_Vect, Jerk[Jerk.Count - 1], GizmoJerkScale);
+            }
+            else
+            {
+                Jerk_Vect.SetActive(false);
+            }
+            if (OrientationActive)
+            {
+                Vector3 QuatAxis;
+                float QuatAngle;
+
+                Quaternion DQuat;
+                if (Quat.Count < 2)
+                    DQuat = Quaternion.identity;
+                else
+                    DQuat = Quaternion.Inverse(Quat[Quat.Count - 2]) * Quat[Quat.Count - 1];
+
+                DQuat.ToAngleAxis(out QuatAngle, out QuatAxis);
+                Quat_Vect.SetActive(true);
+                DrawVector(Quat_Vect, QuatAxis * QuatAngle, GizmoQuatScale);
+            }
+            else
+            {
+                Quat_Vect.SetActive(false);
+            }
+        }
+        else
+        {
+            Speed_Vect.SetActive(false);
+            Acc_Vect.SetActive(false);
+            Jerk_Vect.SetActive(false);
+            Quat_Vect.SetActive(false);
+        }
 
 
-		//Draw Trail
-		if (Trail) {
+        //Draw Trail
+        if (Trail)
+        {
 
-			//Draw Trails and vect
-			if (PosActive){
-				Pos_Trail.SetActive (true);
+            //Draw Trails and vect
+            if (PosActive)
+            {
+                Pos_Trail.SetActive(true);
                 Draw_Trail(Pos, Pos_Trail, 1);
             }
-			else
-				Pos_Trail.SetActive (false);
+            else
+                Pos_Trail.SetActive(false);
 
 
-			if (SpeedActive) {
-				Speed_Ribbon.SetActive (true);
+            if (SpeedActive)
+            {
+                Speed_Ribbon.SetActive(true);
                 Draw_Ribbon(Speed, Pos, Speed_Ribbon, GizmoSpeedScale);
-            } 
-			else {
-				Speed_Ribbon.SetActive (false);
-			}
+            }
+            else
+            {
+                Speed_Ribbon.SetActive(false);
+            }
 
-			if (AccActive) {
-				Acc_Ribbon.SetActive (true);
-				Draw_Ribbon (Acc,Pos,Acc_Ribbon,GizmoAccScale);
-			} 
-			else {
-				Acc_Ribbon.SetActive (false);
-			}
+            if (AccActive)
+            {
+                Acc_Ribbon.SetActive(true);
+                Draw_Ribbon(Acc, Pos, Acc_Ribbon, GizmoAccScale);
+            }
+            else
+            {
+                Acc_Ribbon.SetActive(false);
+            }
 
-			if (JerkActive) {
-				Jerk_Ribbon.SetActive (true);
+            if (JerkActive)
+            {
+                Jerk_Ribbon.SetActive(true);
                 Draw_Ribbon(Jerk, Pos, Jerk_Ribbon, GizmoJerkScale);
-            } 
-			else {
-				Jerk_Ribbon.SetActive (false);
-			}
+            }
+            else
+            {
+                Jerk_Ribbon.SetActive(false);
+            }
 
 
-			if (OrientationActive) {
-				Quat_Trail.SetActive (true);
-				
-			} 
-			else {
-				Quat_Trail.SetActive (false);
-			}
+            if (OrientationActive)
+            {
+                Quat_Trail.SetActive(true);
 
-		} 
-		else {
-			Pos_Trail.SetActive (false);
-			Speed_Ribbon.SetActive (false);
-			Acc_Ribbon.SetActive (false);
-			Jerk_Ribbon.SetActive (false);
-			Quat_Trail.SetActive (false);
-		}
-			
+            }
+            else
+            {
+                Quat_Trail.SetActive(false);
+            }
 
-	}
-
-
-
-	// Record and Compute Data
-	void RecordData () {
-
-		Times.Add(Time.time - BeginTime);
-
-		//record Delta Times
-		if (Times.Count < 2) 
-			DTimes.Add (0.0f);
-		else{
-			DTime = Times [Times.Count - 1] - Times [Times.Count - 2];
-			DTimes.Add (DTime);
-		}
-	
-		MDTime = MovingAverage (DTimes, DTimes.Count - 1, MovingAverageSample);
-		//DTime = Time.deltaTime;
-		//DTime = 0.0165f;
+        }
+        else
+        {
+            Pos_Trail.SetActive(false);
+            Speed_Ribbon.SetActive(false);
+            Acc_Ribbon.SetActive(false);
+            Jerk_Ribbon.SetActive(false);
+            Quat_Trail.SetActive(false);
+        }
 
 
-		//Referential
-		if (MotionRef) {
-			RefMat = MotionRef.transform.worldToLocalMatrix;
-			RefMatInv = MotionRef.transform.localToWorldMatrix;
-			RefQuat = MotionRef.transform.rotation;
-			RefPos = MotionRef.transform.position;
-		} else {
-			RefMat = Matrix4x4.identity;
-			RefMatInv = Matrix4x4.identity;
-			RefQuat = Quaternion.identity;
-			RefPos = Vector3.zero;
-		}
-
-		//record Position
-		CurrentPos = RefMat*(MotionObj.transform.position-RefPos);
-		Pos.Add(CurrentPos);
-
-		//record Quaternion
-		if (Quat.Count < 2)
-			Quat.Add (Quaternion.identity);
-		else {
-			Quat.Add (Quaternion.Inverse (RefQuat) * MotionObj.transform.rotation);
-			CurrentQuat = Quaternion.Inverse (Quat [Quat.Count - 2]) * Quat [Quat.Count - 1];
-			CurrentQuat.ToAngleAxis (out CurrentQuatAngle, out  CurrentQuatAxis);
-			CurrentQuatAngle = CurrentQuatAngle * Mathf.Rad2Deg;
-		}
-
-		//record Speed
-		if (Pos.Count < 2)
-			Speed.Add( Vector3.zero ); 
-		else{
-			Vector3 Pos1 =  MovingAverage(Pos,Pos.Count-1,MovingAverageSample) ;
-			Vector3 Pos2 =  MovingAverage(Pos,Pos.Count-2,MovingAverageSample) ;
-			CurrentSpeed = (Pos1 - Pos2) / (MDTime);
-			CurrentSpeedMag = CurrentSpeed.magnitude;
-			Speed.Add( CurrentSpeed );
-		}
-
-		
-		//record Acc
-		if (Speed.Count < 2)
-			Acc.Add(Vector3.zero);
-		else{
-			Vector3 Speed1 =  MovingAverage(Speed,Speed.Count-1,MovingAverageSample) ;
-			Vector3 Speed2 =  MovingAverage(Speed,Speed.Count-2,MovingAverageSample) ;
-			CurrentAcc = (Speed1 - Speed2) / (MDTime);
-			CurrentAccMag = CurrentAcc.magnitude;
-			Acc.Add(CurrentAcc);
-		}
-
-		//record Jerk
-		if (Acc.Count < 2)
-			Jerk.Add (Vector3.zero);
-		else {
-			Vector3 Acc1 = MovingAverage (Acc, Acc.Count - 1, MovingAverageSample);
-			Vector3 Acc2 = MovingAverage (Acc, Acc.Count - 2, MovingAverageSample);
-			CurrentJerk = (Acc1 - Acc2) / (MDTime);
-			CurrentJerkMag = CurrentJerk.magnitude;
-			Jerk.Add (CurrentJerk);
-		}
+    }
 
 
-		FrameCount++;
-	}
 
-	//initialisation
-	void RecordInit () {
+    // Record and Compute Data
+    void RecordData()
+    {
 
-		//Tracked Object
-		if (!MotionObj) {
-			MotionObj = gameObject;
-		}
+        Times.Add(Time.time - BeginTime);
 
-		Pos.Clear ();
-		Speed.Clear ();
-		Acc.Clear ();
-		Jerk.Clear ();
-		Quat.Clear ();
-		Times.Clear ();
+        //record Delta Times
+        if (Times.Count < 2)
+            DTimes.Add(0.0f);
+        else
+        {
+            DTime = Times[Times.Count - 1] - Times[Times.Count - 2];
+            DTimes.Add(DTime);
+        }
 
-		FrameCount = 0;
+        MDTime = MovingAverage(DTimes, DTimes.Count - 1, MovingAverageSample);
+        //DTime = Time.deltaTime;
+        //DTime = 0.0165f;
 
-		Pos_Trail 	 = CreatTrailObject(Pos_Tag,Pos_Col);
-		Speed_Ribbon = CreatRibbonObject(Speed_Tag,Speed_Col);
-		Acc_Ribbon 	 = CreatRibbonObject(Acc_Tag,Acc_Col);
-		Jerk_Ribbon	 = CreatRibbonObject(Jerk_Tag,Jerk_Col);
-		Quat_Trail   = CreatRibbonObject(Quat_Tag,Quat_Col); 
 
-		Speed_Vect 	 = CreatVectObject(Speed_Tag,Speed_Col);
-		Acc_Vect 	 = CreatVectObject(Acc_Tag,Acc_Col);
-		Jerk_Vect 	 = CreatVectObject(Jerk_Tag,Jerk_Col);
-		Quat_Vect 	 = CreatVectObject(Quat_Tag,Quat_Col); 
+        //Referential
+        if (MotionRef)
+        {
+            RefMat = MotionRef.transform.worldToLocalMatrix;
+            RefMatInv = MotionRef.transform.localToWorldMatrix;
+            RefQuat = MotionRef.transform.rotation;
+            RefPos = MotionRef.transform.position;
+        }
+        else
+        {
+            RefMat = Matrix4x4.identity;
+            RefMatInv = Matrix4x4.identity;
+            RefQuat = Quaternion.identity;
+            RefPos = Vector3.zero;
+        }
 
-		BeginTime = Time.time;
-	}
-		
-	
+        //record Position
+        CurrentPos = RefMat * (MotionObj.transform.position - RefPos);
+        Pos.Add(CurrentPos);
+
+        //record Quaternion
+        if (Quat.Count < 2)
+            Quat.Add(Quaternion.identity);
+        else
+        {
+            Quat.Add(Quaternion.Inverse(RefQuat) * MotionObj.transform.rotation);
+            CurrentQuat = Quaternion.Inverse(Quat[Quat.Count - 2]) * Quat[Quat.Count - 1];
+            CurrentQuat.ToAngleAxis(out CurrentQuatAngle, out CurrentQuatAxis);
+            CurrentQuatAngle = CurrentQuatAngle * Mathf.Rad2Deg;
+        }
+
+        //record Speed
+        if (Pos.Count < 2)
+            Speed.Add(Vector3.zero);
+        else
+        {
+            Vector3 Pos1 = MovingAverage(Pos, Pos.Count - 1, MovingAverageSample);
+            Vector3 Pos2 = MovingAverage(Pos, Pos.Count - 2, MovingAverageSample);
+            CurrentSpeed = (Pos1 - Pos2) / (MDTime);
+            CurrentSpeedMag = CurrentSpeed.magnitude;
+            Speed.Add(CurrentSpeed);
+            //Detect plane
+            if (Speed.Count > 11)
+            {
+                Draw_Plane = Detect_Plane(Speed, Speed.Count - 11, Speed.Count - 1);
+            }
+        }
+
+
+        //record Acc
+        if (Speed.Count < 2)
+            Acc.Add(Vector3.zero);
+        else
+        {
+            Vector3 Speed1 = MovingAverage(Speed, Speed.Count - 1, MovingAverageSample);
+            Vector3 Speed2 = MovingAverage(Speed, Speed.Count - 2, MovingAverageSample);
+            CurrentAcc = (Speed1 - Speed2) / (MDTime);
+            CurrentAccMag = CurrentAcc.magnitude;
+            Acc.Add(CurrentAcc);
+        }
+
+        //record Jerk
+        if (Acc.Count < 2)
+            Jerk.Add(Vector3.zero);
+        else
+        {
+            Vector3 Acc1 = MovingAverage(Acc, Acc.Count - 1, MovingAverageSample);
+            Vector3 Acc2 = MovingAverage(Acc, Acc.Count - 2, MovingAverageSample);
+            CurrentJerk = (Acc1 - Acc2) / (MDTime);
+            CurrentJerkMag = CurrentJerk.magnitude;
+            Jerk.Add(CurrentJerk);
+        }
+
+        FrameCount++;
+    }
+
+    //initialisation
+    void RecordInit()
+    {
+
+        //Tracked Object
+        if (!MotionObj)
+        {
+            MotionObj = gameObject;
+        }
+
+        Pos.Clear();
+        Speed.Clear();
+        Acc.Clear();
+        Jerk.Clear();
+        Quat.Clear();
+        Times.Clear();
+
+        FrameCount = 0;
+
+        Pos_Trail = CreatTrailObject(Pos_Tag, Pos_Col);
+        Speed_Ribbon = CreatRibbonObject(Speed_Tag, Speed_Col);
+        Acc_Ribbon = CreatRibbonObject(Acc_Tag, Acc_Col);
+        Jerk_Ribbon = CreatRibbonObject(Jerk_Tag, Jerk_Col);
+        Quat_Trail = CreatRibbonObject(Quat_Tag, Quat_Col);
+
+        Speed_Vect = CreatVectObject(Speed_Tag, Speed_Col);
+        Acc_Vect = CreatVectObject(Acc_Tag, Acc_Col);
+        Jerk_Vect = CreatVectObject(Jerk_Tag, Jerk_Col);
+        Quat_Vect = CreatVectObject(Quat_Tag, Quat_Col);
+
+        BeginTime = Time.time;
+    }
+
+
 
 
     //DrawRibbon
-    void Draw_Ribbon(List<Vector3>Vectors , List<Vector3> Positions,GameObject RibbonObj,float DrawScale)
+    void Draw_Ribbon(List<Vector3> Vectors, List<Vector3> Positions, GameObject RibbonObj, float DrawScale)
     {
-        if ( Vectors.Count != Positions.Count){
+        if (Vectors.Count != Positions.Count)
+        {
             //Erreur Count
             Debug.Log("Error: Vectors/Position Count");
             return;
@@ -374,10 +413,10 @@ public class MotionViewRibbon : MonoBehaviour {
 
         for (int i = 0; i < Length; i++)
         {
-            Vector3 TVect = RefMatInv * ( Vectors[Vectors.Count - 1 - i] * DrawScale); //DEBUG Test Legth -> Vector.count-1
-            Vector3 TPos = RefMatInv * ( Positions[Positions.Count - 1 - i] );
+            Vector3 TVect = RefMatInv * (Vectors[Vectors.Count - 1 - i] * DrawScale); //DEBUG Test Legth -> Vector.count-1
+            Vector3 TPos = RefMatInv * (Positions[Positions.Count - 1 - i]);
 
-            Ribbon_Renderer.Vectors.Add(TVect );
+            Ribbon_Renderer.Vectors.Add(TVect);
             Ribbon_Renderer.Positions.Add(TPos + RefPos);
         }
         Ribbon_Renderer.Alpha = Alpha;
@@ -385,7 +424,7 @@ public class MotionViewRibbon : MonoBehaviour {
     }
 
     //DrawTrail with Position
-    void Draw_Trail(List<Vector3> Vectors, List<Vector3> Positions,GameObject TrailObj,float DrawScale)
+    void Draw_Trail(List<Vector3> Vectors, List<Vector3> Positions, GameObject TrailObj, float DrawScale)
     {
         int Length = (Vectors.Count < TrailLength) ? Vectors.Count : TrailLength;
         LineRenderer Trail_Renderer = TrailObj.GetComponent<LineRenderer>();
@@ -407,18 +446,70 @@ public class MotionViewRibbon : MonoBehaviour {
         Trail_Renderer.positionCount = Length;
         for (int i = 0; i < Length; i++)
         {
-            Vector3 TVect = RefMatInv * ( Vectors[Vectors.Count - 1 - i] * DrawScale);
+            Vector3 TVect = RefMatInv * (Vectors[Vectors.Count - 1 - i] * DrawScale);
             Trail_Renderer.SetPosition(i, TVect + RefPos);
         }
         Trail_Renderer.startWidth = 0.01f * TrailLinesWidth;
         Trail_Renderer.endWidth = TrailLinesWidth;
     }
 
+    void Set_Plane(List<Vector3> Speeds, GameObject plane)
+    {
+        plane.transform.position.Set();
+        plane.transform.rotation.SetLookRotation();
+    }
 
+    (bool, Vector3) Detect_Plane(List<Vector3> vectors, int StartIndex, int EndIndex)
+    {
+        startVector = vectors[StartIndex];
+        List<Vector3> perps;
+        for (int i = StartIndex; i < EndIndex; i++)
+        {
+            perp = Compute_Vect_Prod(startVector, vectors[i]);
+            perps = Normalise_Vect(perp);
+            perps.Add(perp);
+        }
+        draw_plane = Detect_Colinearity(perps);
+        return (draw_plane, startVector);
 
+    }
 
+    Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
+    {
+        Vector3 res;
+        res[0] = a[1] * b[2] - a[2] * b[1];
+        res[1] = a[2] * b[0] - b[2] * a[0];
+        res[2] = a[0] * b[1] - b[0] * a[1];
+        return res;
+    }
 
+    Vector3 Normalise_Vect(Vector3 a)
+    {
+        float norm = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+        a[0] = a[0] / norm;
+        a[1] = a[1] / norm;
+        a[2] = a[2] / norm;
+        return a;
+    }
 
+    bool Detect_Colinearity(List<Vector3> vectors)
+    {
+        float prodSum;
+        for (i = 0; i < vectors.Count - 1; i++)
+        {
+            float prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
+            prodSum += prod;
+        }
+        avg = prodSum / vectors.Count;
+        if (avg < 0.1)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
 
 
@@ -460,107 +551,120 @@ public class MotionViewRibbon : MonoBehaviour {
 
 
     //Draw Vectors with Line render
-    void DrawVector(GameObject Obj,Vector3 CurrentVect,float GizmoVectScale) {
+    void DrawVector(GameObject Obj, Vector3 CurrentVect, float GizmoVectScale)
+    {
 
-		LineRenderer VectLine = Obj.GetComponent<LineRenderer> ();
+        LineRenderer VectLine = Obj.GetComponent<LineRenderer>();
 
-		CurrentVect *= GizmoVectScale;
+        CurrentVect *= GizmoVectScale;
 
-		Vector3 TVect = RefMatInv * CurrentVect;
-		VectLine.positionCount = 2;
-		VectLine.SetPosition (0, Obj.transform.position);
-		VectLine.SetPosition (1, Obj.transform.position + TVect);
+        Vector3 TVect = RefMatInv * CurrentVect;
+        VectLine.positionCount = 2;
+        VectLine.SetPosition(0, Obj.transform.position);
+        VectLine.SetPosition(1, Obj.transform.position + TVect);
 
-		VectLine.startWidth = VectLinesWidth;
-		VectLine.endWidth = 0.01f*VectLinesWidth;
-		//	VectLine.widthMultiplier = 0.5f;
-	}	
-
-
-	//Filter MovingAverage (Vector)
-	Vector3 MovingAverage(List<Vector3> VectList,int From,int Number  ) {
-
-		Vector3 Res = Vector3.zero;
-
-		if (Number <= 1)
-			return VectList [From];
-
-		if (From < Number) {
-			for (int i = From; i < VectList.Count; i++) {
-				Res += VectList[i];
-			}
-			Res /= (VectList.Count-From);
-		}
-		else{
-			for (int i = 0; i < Number; i++) {
-				Res += VectList[From-i];
-			}
-			Res /= Number;
-		}
-		return Res;
-	}
-
-	//Filter MovingAverage (Float)
-	float MovingAverage(List<float> List,int From,int Number  ) {
-
-		float Res = 0.0f;
-
-		if (Number <= 1)
-			return List [From];
-
-		if (From < Number) {
-			for (int i = From; i < (List.Count); i++) {
-				Res += List[i];
-			}
-			Res /= (List.Count-From);
-		}
-		else{
-			for (int i = 0 ; i < Number; i++) {
-				Res += List[From-i];
-			}
-			Res /= Number;
-		}
-		return Res;
-	}
+        VectLine.startWidth = VectLinesWidth;
+        VectLine.endWidth = 0.01f * VectLinesWidth;
+        //	VectLine.widthMultiplier = 0.5f;
+    }
 
 
-	//Compute Gradiant for Trail Fade Color
-	Gradient SetColorGradient(Color Col){
-		Gradient ColGrad = new Gradient ();
-		GradientColorKey[] KeysColor = new GradientColorKey[2];
-		KeysColor [0].color = Col;
-		KeysColor [0].time = 0;
-		KeysColor [1].color = Col;
-		KeysColor [1].time = 1;
+    //Filter MovingAverage (Vector)
+    Vector3 MovingAverage(List<Vector3> VectList, int From, int Number)
+    {
 
-		GradientAlphaKey[] KeysAlf= new GradientAlphaKey[2];
-		KeysAlf [0].alpha = 1;
-		KeysAlf [0].time = 0;
-		KeysAlf [1].alpha = 0;
-		KeysAlf [1].time = 1;
+        Vector3 Res = Vector3.zero;
 
-		ColGrad.SetKeys (KeysColor, KeysAlf);
-		return ColGrad;
-	}
+        if (Number <= 1)
+            return VectList[From];
 
-	//Compute Gradiant for Vector Full Color
-	Gradient SetVectColorGradient(Color Col){
-		Gradient ColGrad = new Gradient ();
-		GradientColorKey[] KeysColor = new GradientColorKey[2];
-		KeysColor [0].color = Col;
-		KeysColor [0].time = 0;
-		KeysColor [1].color = Col;
-		KeysColor [1].time = 1;
+        if (From < Number)
+        {
+            for (int i = From; i < VectList.Count; i++)
+            {
+                Res += VectList[i];
+            }
+            Res /= (VectList.Count - From);
+        }
+        else
+        {
+            for (int i = 0; i < Number; i++)
+            {
+                Res += VectList[From - i];
+            }
+            Res /= Number;
+        }
+        return Res;
+    }
 
-		GradientAlphaKey[] KeysAlf= new GradientAlphaKey[2];
-		KeysAlf [0].alpha = 1;
-		KeysAlf [0].time = 0;
-		KeysAlf [1].alpha = 1;
-		KeysAlf [1].time = 1;
+    //Filter MovingAverage (Float)
+    float MovingAverage(List<float> List, int From, int Number)
+    {
 
-		ColGrad.SetKeys (KeysColor, KeysAlf);
-		return ColGrad;
-	}
+        float Res = 0.0f;
+
+        if (Number <= 1)
+            return List[From];
+
+        if (From < Number)
+        {
+            for (int i = From; i < (List.Count); i++)
+            {
+                Res += List[i];
+            }
+            Res /= (List.Count - From);
+        }
+        else
+        {
+            for (int i = 0; i < Number; i++)
+            {
+                Res += List[From - i];
+            }
+            Res /= Number;
+        }
+        return Res;
+    }
+
+
+    //Compute Gradiant for Trail Fade Color
+    Gradient SetColorGradient(Color Col)
+    {
+        Gradient ColGrad = new Gradient();
+        GradientColorKey[] KeysColor = new GradientColorKey[2];
+        KeysColor[0].color = Col;
+        KeysColor[0].time = 0;
+        KeysColor[1].color = Col;
+        KeysColor[1].time = 1;
+
+        GradientAlphaKey[] KeysAlf = new GradientAlphaKey[2];
+        KeysAlf[0].alpha = 1;
+        KeysAlf[0].time = 0;
+        KeysAlf[1].alpha = 0;
+        KeysAlf[1].time = 1;
+
+        ColGrad.SetKeys(KeysColor, KeysAlf);
+        return ColGrad;
+    }
+
+    //Compute Gradiant for Vector Full Color
+    Gradient SetVectColorGradient(Color Col)
+    {
+        Gradient ColGrad = new Gradient();
+        GradientColorKey[] KeysColor = new GradientColorKey[2];
+        KeysColor[0].color = Col;
+        KeysColor[0].time = 0;
+        KeysColor[1].color = Col;
+        KeysColor[1].time = 1;
+
+        GradientAlphaKey[] KeysAlf = new GradientAlphaKey[2];
+        KeysAlf[0].alpha = 1;
+        KeysAlf[0].time = 0;
+        KeysAlf[1].alpha = 1;
+        KeysAlf[1].time = 1;
+
+        ColGrad.SetKeys(KeysColor, KeysAlf);
+        return ColGrad;
+    }
 
     //Creat RibbonTrail Object Parent to track Object
     GameObject CreatRibbonObject(string Name, Color Col)
@@ -606,34 +710,36 @@ public class MotionViewRibbon : MonoBehaviour {
 
 
     //Creat Vector Object Parent to track Object
-    GameObject CreatVectObject(string Name,Color Col){
+    GameObject CreatVectObject(string Name, Color Col)
+    {
 
-		GameObject VectObject = new GameObject ();
-		VectObject.transform.position = MotionObj.transform.position;
-		VectObject.transform.rotation = MotionObj.transform.rotation;
-		VectObject.name = Name+ "_Vect";
-		VectObject.transform.parent = MotionObj.gameObject.transform;
-		LineRenderer Lines = VectObject.AddComponent<LineRenderer>();
-		Lines.material = LinesMaterials;
+        GameObject VectObject = new GameObject();
+        VectObject.transform.position = MotionObj.transform.position;
+        VectObject.transform.rotation = MotionObj.transform.rotation;
+        VectObject.name = Name + "_Vect";
+        VectObject.transform.parent = MotionObj.gameObject.transform;
+        LineRenderer Lines = VectObject.AddComponent<LineRenderer>();
+        Lines.material = LinesMaterials;
 
-		Lines.colorGradient = SetVectColorGradient(Col);
+        Lines.colorGradient = SetVectColorGradient(Col);
 
-		Lines.receiveShadows = false;
-		Lines.useWorldSpace = true;
+        Lines.receiveShadows = false;
+        Lines.useWorldSpace = true;
 
-		VectObjects.Add (VectObject);
+        VectObjects.Add(VectObject);
 
-		return VectObject;
-	} 
+        return VectObject;
+    }
 
 
-	// DEBUG TO USE
-	Vector3 Deriv(List<Vector3> Value,float DTime){
+    // DEBUG TO USE
+    Vector3 Deriv(List<Vector3> Value, float DTime)
+    {
 
-        if (Value.Count<2)
-			return Vector3.zero;
-		return ( Value[Value.Count - 1] - Value [Value.Count - 2] ) / DTime;
-	}
+        if (Value.Count < 2)
+            return Vector3.zero;
+        return (Value[Value.Count - 1] - Value[Value.Count - 2]) / DTime;
+    }
 
 
 
