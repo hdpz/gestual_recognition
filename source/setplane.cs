@@ -14,6 +14,10 @@ using System;
 public class setplane : MonoBehaviour
 {
     public GameObject PlaneViz;
+    [Range(0.01f, 0.5f)]
+    public float Epsilon = 0.1f;
+    [Range(1, 100)]
+    public int Batch = 100;
     //Record
     public bool Record = true;
     public int FrameCount;
@@ -122,6 +126,7 @@ public class setplane : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        PlaneViz = GameObject.CreatePrimitive(PrimitiveType.Plane);
         RecordInit();
     }
 
@@ -325,14 +330,15 @@ public class setplane : MonoBehaviour
             CurrentSpeedMag = CurrentSpeed.magnitude;
             Speed.Add(CurrentSpeed);
             //Detect plane
-            if (Speed.Count > 30)
+            if (Speed.Count > Batch && Speed.Count%1==0)
             {
                 Vector3 norm_vector;
-                (Draw_Plane, norm_vector )= Detect_Plane(Speed, Speed.Count - 30, Speed.Count - 1);
+                (Draw_Plane, norm_vector )= Detect_Plane(Speed, Speed.Count - Batch, Speed.Count - 1);
                 if (Draw_Plane)
                 {
+                    print(norm_vector);
                     Set_Plane(norm_vector, Pos[Pos.Count - 1]);
-            }
+                }
             }
             
         }
@@ -400,6 +406,73 @@ public class setplane : MonoBehaviour
 
 
 
+    void Set_Plane(Vector3 norm, Vector3 pos )
+    {
+        PlaneViz.transform.position = new Vector3 (pos.x, pos.y, pos.z);
+        PlaneViz.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+        PlaneViz.transform.up = norm;
+    }
+
+    (bool, Vector3) Detect_Plane(List<Vector3> vectors, int StartIndex, int EndIndex)
+    {
+        Vector3 startVector = vectors[StartIndex];
+        List<Vector3> perps = new List<Vector3>();
+        for (int i = StartIndex; i < EndIndex; i++)
+        {
+            Vector3 perp = Compute_Vect_Prod(startVector, vectors[i]);
+            perp.Normalize();
+            perps.Add(perp);
+        }
+        bool draw_plane = Detect_Colinearity(perps);
+        return (draw_plane, GetMeanVector(perps));
+
+    }
+
+    Vector3 GetMeanVector(List<Vector3> vectors)
+    {
+        if (vectors.Count == 0)
+            return Vector3.zero;
+        float x = 0f;
+        float y = 0f;
+        float z = 0f;
+        foreach (Vector3 vec in vectors)
+        {
+            x += vec.x;
+            y += vec.y;
+            z += vec.z;
+        }
+        return new Vector3(x / vectors.Count, y / vectors.Count, z / vectors.Count);
+    }
+
+    Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
+    {
+        Vector3 res= new Vector3();
+        res.Set((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (b[2] * a[0]), (a[0] * b[1]) - (b[0] * a[1]));
+        return res;
+    }
+
+
+    bool Detect_Colinearity(List<Vector3> vectors)
+    {
+        float prodSum=0;
+        for (int i = 0; i < vectors.Count - 1; i++)
+        {
+            Vector3 prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
+            prodSum += prod.magnitude;
+        }
+        float avg = prodSum / vectors.Count;
+        if (avg < Epsilon)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+
+
 
     //DrawRibbon
     void Draw_Ribbon(List<Vector3> Vectors, List<Vector3> Positions, GameObject RibbonObj, float DrawScale)
@@ -460,88 +533,6 @@ public class setplane : MonoBehaviour
         Trail_Renderer.endWidth = TrailLinesWidth;
     }
 
-    Mesh CreateMesh(float width, float height)
-    {
-        Mesh m = new Mesh();
-        m.name = "ScriptedMesh";
-        m.vertices = new Vector3[] {
-        new Vector3(-width, -height, 0.01f),
-        new Vector3(width, -height, 0.01f),
-        new Vector3(width, height, 0.01f),
-        new Vector3(-width, height, 0.01f)
-    };
-        m.uv = new Vector2[] {
-        new Vector2 (0, 0),
-        new Vector2 (0, 1),
-        new Vector2(1, 1),
-        new Vector2 (1, 0)
-    };
-        m.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
-        m.RecalculateNormals();
-
-        return m;
-    }
-
-    void Set_Plane(Vector3 norm, Vector3 pos )
-    {
-        PlaneViz = new GameObject("Plane");
-        MeshFilter meshFilter = (MeshFilter)PlaneViz.AddComponent(typeof(MeshFilter));
-        meshFilter.mesh = CreateMesh(1, 0.2f);
-        MeshRenderer renderer = PlaneViz.AddComponent(typeof(MeshRenderer)) as MeshRenderer;
-        renderer.material.shader = Shader.Find("Particles/Additive");
-        Texture2D tex = new Texture2D(1, 1);
-        tex.SetPixel(0, 0, Color.green);
-        tex.Apply();
-        renderer.material.mainTexture = tex;
-        renderer.material.color = Color.green;
-        renderer.transform.position.Set(pos.x, pos.y, pos.z);
-        renderer.transform.rotation.SetLookRotation(norm);
-
-        const float V = 10;
-        GameObject.Destroy(PlaneViz, V);
-    }
-
-    (bool, Vector3) Detect_Plane(List<Vector3> vectors, int StartIndex, int EndIndex)
-    {
-        Vector3 startVector = vectors[StartIndex];
-        List<Vector3> perps = new List<Vector3>();
-        for (int i = StartIndex; i < EndIndex; i++)
-        {
-            Vector3 perp = Compute_Vect_Prod(startVector, vectors[i]);
-            perp.Normalize();
-            perps.Add(perp);
-        }
-        bool draw_plane = Detect_Colinearity(perps);
-        return (draw_plane, startVector);
-
-    }
-
-    Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
-    {
-        Vector3 res= new Vector3();
-        res.Set((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (b[2] * a[0]), (a[0] * b[1]) - (b[0] * a[1]));
-        return res;
-    }
-
-
-    bool Detect_Colinearity(List<Vector3> vectors)
-    {
-        float prodSum=0;
-        for (int i = 0; i < vectors.Count - 1; i++)
-        {
-            Vector3 prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
-            prodSum += prod.magnitude;
-        }
-        float avg = prodSum / vectors.Count;
-        if (avg < 0.1)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
 
 
 
