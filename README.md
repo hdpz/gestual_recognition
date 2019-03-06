@@ -1,5 +1,6 @@
 # gestual_recognition
 Short project to identify planes of movement on given mocaps. Using unity and C# scripts for detection and visualisation of the movement planes.
+With Yoann Pradat and Clement Chadebec.
 
 Instruction for creating a scene:
 1. Open Unity, open project GIT_Unity2018
