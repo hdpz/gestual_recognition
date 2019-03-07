@@ -11,13 +11,9 @@ using UnityEngine;
 using System.IO;
 using System;
 
-public class setplane : MonoBehaviour
+public class Setplane : MonoBehaviour
 {
-    public GameObject PlaneViz;
-    [Range(0.01f, 0.5f)]
-    public float Epsilon = 0.1f;
-    [Range(1, 100)]
-    public int Batch = 100;
+
     //Record
     public bool Record = true;
     public int FrameCount;
@@ -31,6 +27,16 @@ public class setplane : MonoBehaviour
     public bool PosActive = true;
     public Color Pos_Col = Color.black;
     public Vector3 CurrentPos;
+    [Range(10, 200)]
+    public int NbSpeedsPlane = 80;
+    [Range(0, 0.5f)]
+    public float QuantilePlane = 0.30f;
+    [Range(0, 1.0f)]
+    public float ThreshPlane = 0.35f;
+    public float PlaneWidth = 10;
+    public float PlaneHeight = 10;
+    public GameObject PlaneViz = null;
+    public bool PlaneMov = false;
 
     public bool SpeedActive = false;
     [Range(0, 10)]
@@ -80,8 +86,6 @@ public class setplane : MonoBehaviour
     [Range(1, 120)]
     public int MovingAverageSample = 15;
 
-    public bool Draw_Plane = false;
-
     //RefValue
     Matrix4x4 RefMat;
     Matrix4x4 RefMatInv;
@@ -121,13 +125,12 @@ public class setplane : MonoBehaviour
     List<GameObject> TrailObjects = new List<GameObject>();
     List<GameObject> VectObjects = new List<GameObject>();
 
-
-
     // Use this for initialization
     void Start()
     {
-        PlaneViz = GameObject.CreatePrimitive(PrimitiveType.Plane);
         RecordInit();
+        PlaneViz = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        PlaneViz.transform.localScale = new Vector3(0, 0, 0);
     }
 
 
@@ -266,8 +269,6 @@ public class setplane : MonoBehaviour
 
     }
 
-
-
     // Record and Compute Data
     void RecordData()
     {
@@ -330,17 +331,10 @@ public class setplane : MonoBehaviour
             CurrentSpeedMag = CurrentSpeed.magnitude;
             Speed.Add(CurrentSpeed);
             //Detect plane
-            if (Speed.Count > Batch && Speed.Count%1==0)
+            if (Speed.Count > NbSpeedsPlane)
             {
-                Vector3 norm_vector;
-                (Draw_Plane, norm_vector )= Detect_Plane(Speed, Speed.Count - Batch, Speed.Count - 1);
-                if (Draw_Plane)
-                {
-                    print(norm_vector);
-                    Set_Plane(norm_vector, Pos[Pos.Count - 1]);
-                }
+                Draw_Plane(Pos, Speed, Speed.Count - NbSpeedsPlane, Speed.Count - 1);
             }
-            
         }
 
 
@@ -369,6 +363,73 @@ public class setplane : MonoBehaviour
         }
 
         FrameCount++;
+    }
+
+    void Draw_Plane(List<Vector3> posVec, List<Vector3> speedVec, int startIndex, int endIndex)
+    {
+        Vector3 speedStart = speedVec[startIndex];
+        Vector3 norm, norm_mean, pos;
+        List<Vector3> norms = new List<Vector3>();
+
+        for (int i = startIndex; i < endIndex-1; i++)
+        {
+            norm = Compute_Vect_Prod(speedVec[i], speedVec[i+1]);
+            norm.Normalize();
+            norms.Add(norm);
+        }
+        norm_mean = GetMeanVector(norms);
+        PlaneMov = Detect_Plane(norm_mean, norms);
+
+        if (PlaneMov)
+        {
+            norm = GetMeanVector(norms);
+            pos = posVec[posVec.Count - 1];
+
+            PlaneViz.transform.name = "PlaneViz";
+            PlaneViz.transform.up = norm;
+            PlaneViz.transform.position = new Vector3(pos.x, pos.y, pos.z);
+            PlaneViz.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+
+        }
+        else
+        {
+            PlaneViz.transform.localScale = new Vector3(0f, 0f, 0f);
+        }
+
+    }
+
+    Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
+    {
+        Vector3 res = new Vector3();
+        res.Set((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (b[2] * a[0]), (a[0] * b[1]) - (b[0] * a[1]));
+        return res;
+    }
+
+    bool Detect_Plane(Vector3 norm_mean, List<Vector3> norms)
+    {
+        float[] arr_mag = new float[norms.Count];
+        for (int i=0; i<norms.Count; i++)
+        {
+            arr_mag[i] = Compute_Vect_Prod(norm_mean, norms[i]).magnitude;
+        }
+
+        Array.Sort(arr_mag);
+
+        foreach (float mag in arr_mag)
+        {
+            print(mag.ToString());
+        }
+
+        int high_lim = (int)((1-QuantilePlane) * norms.Count);
+
+        float mean_mag = 0;
+        for (int i=0; i<high_lim; i++)
+        {
+            mean_mag += arr_mag[i]/high_lim;
+        }
+        print("Mean mag");
+        print(mean_mag.ToString());
+        return (mean_mag < ThreshPlane);
     }
 
     //initialisation
@@ -402,73 +463,6 @@ public class setplane : MonoBehaviour
         Quat_Vect = CreatVectObject(Quat_Tag, Quat_Col);
 
         BeginTime = Time.time;
-    }
-
-
-
-    void Set_Plane(Vector3 norm, Vector3 pos )
-    {
-        PlaneViz.transform.position = new Vector3 (pos.x, pos.y, pos.z);
-        PlaneViz.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
-        PlaneViz.transform.up = norm;
-    }
-
-    (bool, Vector3) Detect_Plane(List<Vector3> vectors, int StartIndex, int EndIndex)
-    {
-        Vector3 startVector = vectors[StartIndex];
-        List<Vector3> perps = new List<Vector3>();
-        for (int i = StartIndex; i < EndIndex; i++)
-        {
-            Vector3 perp = Compute_Vect_Prod(startVector, vectors[i]);
-            perp.Normalize();
-            perps.Add(perp);
-        }
-        bool draw_plane = Detect_Colinearity(perps);
-        return (draw_plane, GetMeanVector(perps));
-
-    }
-
-    Vector3 GetMeanVector(List<Vector3> vectors)
-    {
-        if (vectors.Count == 0)
-            return Vector3.zero;
-        float x = 0f;
-        float y = 0f;
-        float z = 0f;
-        foreach (Vector3 vec in vectors)
-        {
-            x += vec.x;
-            y += vec.y;
-            z += vec.z;
-        }
-        return new Vector3(x / vectors.Count, y / vectors.Count, z / vectors.Count);
-    }
-
-    Vector3 Compute_Vect_Prod(Vector3 a, Vector3 b)
-    {
-        Vector3 res= new Vector3();
-        res.Set((a[1] * b[2]) - (a[2] * b[1]), (a[2] * b[0]) - (b[2] * a[0]), (a[0] * b[1]) - (b[0] * a[1]));
-        return res;
-    }
-
-
-    bool Detect_Colinearity(List<Vector3> vectors)
-    {
-        float prodSum=0;
-        for (int i = 0; i < vectors.Count - 1; i++)
-        {
-            Vector3 prod = Compute_Vect_Prod(vectors[i], vectors[i + 1]);
-            prodSum += prod.magnitude;
-        }
-        float avg = prodSum / vectors.Count;
-        if (avg < Epsilon)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
     }
 
 
@@ -531,10 +525,23 @@ public class setplane : MonoBehaviour
         }
         Trail_Renderer.startWidth = 0.01f * TrailLinesWidth;
         Trail_Renderer.endWidth = TrailLinesWidth;
+    }   
+
+    Vector3 GetMeanVector(List<Vector3> vectors)
+    {
+        if (vectors.Count == 0)
+            return Vector3.zero;
+        float x = 0f;
+        float y = 0f;
+        float z = 0f;
+        foreach (Vector3 vec in vectors)
+        {
+            x += vec.x;
+            y += vec.y;
+            z += vec.z;
+        }
+        return new Vector3(x / vectors.Count, y / vectors.Count, z / vectors.Count);
     }
-
-
-
 
     //DEBUG
     void DrawRotation_Trail()
@@ -563,13 +570,6 @@ public class setplane : MonoBehaviour
         Quat_Trail_Renderer.startWidth = 0.01f * TrailLinesWidth;
         Quat_Trail_Renderer.endWidth = TrailLinesWidth;
     }
-
-
-
-
-
-
-
 
 
 
@@ -763,8 +763,5 @@ public class setplane : MonoBehaviour
             return Vector3.zero;
         return (Value[Value.Count - 1] - Value[Value.Count - 2]) / DTime;
     }
-
-
-
 
 }
