@@ -32,10 +32,13 @@ public class Setplane : MonoBehaviour
     [Range(0, 0.5f)]
     public float QuantilePlane = 0.30f;
     [Range(0, 1.0f)]
+
     public float ThreshPlane = 0.35f;
     public float PlaneWidth = 10;
     public float PlaneHeight = 10;
     public GameObject PlaneViz = null;
+
+    public GameObject CircleViz = null;
     public bool PlaneMov = false;
 
     public bool SpeedActive = false;
@@ -131,8 +134,9 @@ public class Setplane : MonoBehaviour
         RecordInit();
         PlaneViz = GameObject.CreatePrimitive(PrimitiveType.Plane);
         PlaneViz.transform.localScale = new Vector3(0, 0, 0);
+        GameObject CircleViz = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        CircleViz.transform.localScale = new Vector3(0, 0, 0);
     }
-
 
     void Update()
     {
@@ -309,6 +313,7 @@ public class Setplane : MonoBehaviour
         CurrentPos = RefMat * (MotionObj.transform.position - RefPos);
         Pos.Add(CurrentPos);
 
+
         //record Quaternion
         if (Quat.Count < 2)
             Quat.Add(Quaternion.identity);
@@ -334,6 +339,9 @@ public class Setplane : MonoBehaviour
             if (Speed.Count > NbSpeedsPlane)
             {
                 Draw_Plane(Pos, Speed, Speed.Count - NbSpeedsPlane, Speed.Count - 1);
+
+                Draw_Circle(Pos, Speed, Pos.Count - NbSpeedsPlane, Pos.Count - 1);
+
             }
         }
 
@@ -365,15 +373,50 @@ public class Setplane : MonoBehaviour
         FrameCount++;
     }
 
-    void Draw_Plane(List<Vector3> posVec, List<Vector3> speedVec, int startIndex, int endIndex)
+    //Computes curvature using sagitta approx R = 
+    void Draw_Circle(List<Vector3> pos, List<Vector3> acc, int startIndex, int endIndex)
     {
-        Vector3 speedStart = speedVec[startIndex];
+        //Compute curvature
+        int middleIndex = (int)(endIndex - startIndex) / 2;
+        Vector3 middle = pos[endIndex] - pos[startIndex];
+        Vector3 middlePoint = pos[middleIndex];
+        float s = (middlePoint - middle).magnitude;
+        float x = (pos[endIndex] - pos[startIndex]).magnitude;
+        curvature = (s * s + x * x) / (2 * s);
+
         Vector3 norm, norm_mean, pos;
         List<Vector3> norms = new List<Vector3>();
 
-        for (int i = startIndex; i < endIndex-1; i++)
+        if (PlaneMov)
         {
-            norm = Compute_Vect_Prod(speedVec[i], speedVec[i+1]);
+            Vector3 sumAcc = new Vector3();
+            //Compute average acceleration to know where to place circle
+            List<Vector3> accs = new List<Vector3>();
+            for (int i = startIndex; i < endIndex; i++)
+            {
+                accs[i - startIndex] = acc[i];
+            }
+            avgAcc = GetMeanVector(accs);
+            avgAcc.Normalize();
+
+            //Assume that avgAcc is the direction where the center of the circle is
+            CircleCenter = middlePoint + avgAcc * curvature;
+
+            CircleViz.transform.name = "CircleViz";
+            CircleViz.transform.position = new Vector3(CircleCenter.x, CircleCenter.y, CircleCenter.z);
+            CircleViz.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+        }
+    }
+
+
+    void Draw_Plane(List<Vector3> posVec, List<Vector3> speedVec, int startIndex, int endIndex)
+    {
+        Vector3 norm, norm_mean, pos;
+        List<Vector3> norms = new List<Vector3>();
+
+        for (int i = startIndex; i < endIndex - 1; i++)
+        {
+            norm = Compute_Vect_Prod(speedVec[i], speedVec[i + 1]);
             norm.Normalize();
             norms.Add(norm);
         }
@@ -389,7 +432,6 @@ public class Setplane : MonoBehaviour
             PlaneViz.transform.up = norm;
             PlaneViz.transform.position = new Vector3(pos.x, pos.y, pos.z);
             PlaneViz.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-
         }
         else
         {
@@ -408,7 +450,7 @@ public class Setplane : MonoBehaviour
     bool Detect_Plane(Vector3 norm_mean, List<Vector3> norms)
     {
         float[] arr_mag = new float[norms.Count];
-        for (int i=0; i<norms.Count; i++)
+        for (int i = 0; i < norms.Count; i++)
         {
             arr_mag[i] = Compute_Vect_Prod(norm_mean, norms[i]).magnitude;
         }
@@ -420,12 +462,12 @@ public class Setplane : MonoBehaviour
             print(mag.ToString());
         }
 
-        int high_lim = (int)((1-QuantilePlane) * norms.Count);
+        int high_lim = (int)((1 - QuantilePlane) * norms.Count);
 
         float mean_mag = 0;
-        for (int i=0; i<high_lim; i++)
+        for (int i = 0; i < high_lim; i++)
         {
-            mean_mag += arr_mag[i]/high_lim;
+            mean_mag += arr_mag[i] / high_lim;
         }
         print("Mean mag");
         print(mean_mag.ToString());
@@ -525,7 +567,7 @@ public class Setplane : MonoBehaviour
         }
         Trail_Renderer.startWidth = 0.01f * TrailLinesWidth;
         Trail_Renderer.endWidth = TrailLinesWidth;
-    }   
+    }
 
     Vector3 GetMeanVector(List<Vector3> vectors)
     {
