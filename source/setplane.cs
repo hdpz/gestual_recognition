@@ -23,10 +23,12 @@ public class Setplane : MonoBehaviour
     public GameObject MotionObj;
     public GameObject MotionRef;
 
-    //Data Viz Property
-    public bool PosActive = true;
+    //
+    public bool PosActive = false;
     public Color Pos_Col = Color.black;
     public Vector3 CurrentPos;
+
+    // Plane Speeds
     [Range(10, 200)]
     public int NbSpeedsPlane = 80;
     [Range(0, 0.5f)]
@@ -34,12 +36,22 @@ public class Setplane : MonoBehaviour
     [Range(0, 1.0f)]
 
     public float ThreshPlane = 0.35f;
-    public float PlaneWidth = 10;
-    public float PlaneHeight = 10;
+    public Color ColorPlane = Color.green;
+    [Range(0, 1.0f)]
+    public float PlaneLocalScale = 0.1f;
     public GameObject PlaneViz = null;
 
-    public GameObject CircleViz = null;
-    public bool PlaneMov = false;
+    // Plane Accs
+    [Range(10, 200)]
+    public int NbAccsPlane = 80;
+    [Range(0, 0.5f)]
+    public float QuantilePlaneAcc = 0.30f;
+    [Range(0, 1.0f)]
+    public float ThreshPlaneAcc = 0.35f;
+    public Color ColorPlaneAcc = Color.red;
+    public float PlaneWidthAcc = 10;
+    public float PlaneHeightAcc = 10;
+    public GameObject PlaneVizAcc = null;
 
     public bool SpeedActive = false;
     [Range(0, 10)]
@@ -335,7 +347,8 @@ public class Setplane : MonoBehaviour
             CurrentSpeed = (Pos1 - Pos2) / (MDTime);
             CurrentSpeedMag = CurrentSpeed.magnitude;
             Speed.Add(CurrentSpeed);
-            //Detect plane
+
+            //Detect plane speed
             if (Speed.Count > NbSpeedsPlane)
             {
                 Draw_Plane(Pos, Speed, Speed.Count - NbSpeedsPlane, Speed.Count - 1);
@@ -356,6 +369,12 @@ public class Setplane : MonoBehaviour
             CurrentAcc = (Speed1 - Speed2) / (MDTime);
             CurrentAccMag = CurrentAcc.magnitude;
             Acc.Add(CurrentAcc);
+
+            //Detect plane speed
+            if (Speed.Count > NbAccsPlane)
+            {
+                Draw_Plane_Acc(Pos, Acc, Acc.Count - NbAccsPlane, Acc.Count - 1);
+            }
         }
 
         //record Jerk
@@ -421,9 +440,9 @@ public class Setplane : MonoBehaviour
             norms.Add(norm);
         }
         norm_mean = GetMeanVector(norms);
-        PlaneMov = Detect_Plane(norm_mean, norms);
+        bool plane_detected = Detect_Plane(norm_mean, norms, QuantilePlane, ThreshPlane);
 
-        if (PlaneMov)
+        if (plane_detected)
         {
             norm = GetMeanVector(norms);
             pos = posVec[posVec.Count - 1];
@@ -431,11 +450,47 @@ public class Setplane : MonoBehaviour
             PlaneViz.transform.name = "PlaneViz";
             PlaneViz.transform.up = norm;
             PlaneViz.transform.position = new Vector3(pos.x, pos.y, pos.z);
-            PlaneViz.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+            PlaneViz.transform.localScale = new Vector3(PlaneLocalScale, PlaneLocalScale, PlaneLocalScale);
+            PlaneViz.GetComponent<Renderer>().material.color = ColorPlane;
+
         }
         else
         {
             PlaneViz.transform.localScale = new Vector3(0f, 0f, 0f);
+        }
+
+    }
+
+    void Draw_Plane_Acc(List<Vector3> posVec, List<Vector3> accVec, int startIndex, int endIndex)
+    {
+        Vector3 accStart = accVec[startIndex];
+        Vector3 norm, norm_mean, pos;
+        List<Vector3> norms = new List<Vector3>();
+
+        for (int i = startIndex; i < endIndex - 1; i++)
+        {
+            norm = Compute_Vect_Prod(accVec[i], accVec[i + 1]);
+            norm.Normalize();
+            norms.Add(norm);
+        }
+        norm_mean = GetMeanVector(norms);
+        bool plane_detected = Detect_Plane(norm_mean, norms, QuantilePlaneAcc, ThreshPlaneAcc);
+
+        if (plane_detected)
+        {
+            norm = GetMeanVector(norms);
+            pos = posVec[posVec.Count - 1];
+
+            PlaneVizAcc.transform.name = "PlaneVizAcc";
+            PlaneVizAcc.transform.up = norm;
+            PlaneVizAcc.transform.position = new Vector3(pos.x, pos.y, pos.z);
+            PlaneVizAcc.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+            PlaneVizAcc.GetComponent<Renderer>().material.color = ColorPlaneAcc;
+
+        }
+        else
+        {
+            PlaneVizAcc.transform.localScale = new Vector3(0f, 0f, 0f);
         }
 
     }
@@ -447,7 +502,7 @@ public class Setplane : MonoBehaviour
         return res;
     }
 
-    bool Detect_Plane(Vector3 norm_mean, List<Vector3> norms)
+    bool Detect_Plane(Vector3 norm_mean, List<Vector3> norms, float quantile, float thresh)
     {
         float[] arr_mag = new float[norms.Count];
         for (int i = 0; i < norms.Count; i++)
@@ -456,22 +511,14 @@ public class Setplane : MonoBehaviour
         }
 
         Array.Sort(arr_mag);
-
-        foreach (float mag in arr_mag)
-        {
-            print(mag.ToString());
-        }
-
-        int high_lim = (int)((1 - QuantilePlane) * norms.Count);
+        int high_lim = (int)((1 - quantile) * norms.Count);
 
         float mean_mag = 0;
         for (int i = 0; i < high_lim; i++)
         {
             mean_mag += arr_mag[i] / high_lim;
         }
-        print("Mean mag");
-        print(mean_mag.ToString());
-        return (mean_mag < ThreshPlane);
+        return (mean_mag < thresh);
     }
 
     //initialisation
@@ -506,9 +553,6 @@ public class Setplane : MonoBehaviour
 
         BeginTime = Time.time;
     }
-
-
-
 
     //DrawRibbon
     void Draw_Ribbon(List<Vector3> Vectors, List<Vector3> Positions, GameObject RibbonObj, float DrawScale)
